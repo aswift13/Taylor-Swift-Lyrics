@@ -1,0 +1,582 @@
+---
+title: "Taylor Swift Lyric EDA"
+author: "Alan Morales"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    theme: united
+
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = FALSE,
+	message = FALSE,
+	warning = FALSE
+)  
+```
+
+# Taylor Swift lyrical EDA
+
+## Introduction
+
+Ill be utilizing data visualization and statistical analysis methods and techniques to Taylor Swift lyrics(9 albums) to explore lyrical trends. She wrote "Speak Now" entirely by herself, one goal is to identify distinctive trends or an anomaly about "Speak Now". With her two most recent albums, "folklore" and "evermore", being labeled her "best written" albums by her fandom(Swifties) and completely different in mood/tone to the other albums in her catalog, a sentiment analysis could shine a light on that statement. I used SAS(Statistical Analysis Software) to break down lyric lines to words. After that I used the haven package to read in those sas data sets to r, besides that initial uses all other methods are done in r. 
+
+
+These are the albums and number of songs from each used in the data. 
+
+ALBUM |SONGS| 
+:---|:---|
+Taylor Swift|14| 
+Fearless|25|
+Speak Now|17| 
+Red |28|
+1989|16|
+Reputation|15| 
+Lover|18|
+folklore|17| 
+evermore|17| 
+9 albums|167 total songs|
+
+
+
+Here are the libraries used in this markdown
+```{r }
+#Load the libraries
+                                    
+library(readxl)      # reads xlsx and xls files
+library(dplyr)       # SQL-style data processing
+library(tidytext)    # text analysis in R
+library(tidyr)       # data reshaping
+library(plotly)      # plot making
+library(wordcloud)   # generating wordclouds
+library(ggplot2)     # generating plots 
+library(forcats)     # handling variables
+library(kableExtra)  # making graphs and tables
+library(magrittr)    # increase efficiency and make more concise code
+library(tidyverse)   # data science package collection
+library(circlize)    # making circular graphs
+library(haven)
+library(readxl)
+
+```
+
+## Data Cleaning
+
+The data cleaning process began with SAS and ended with R filtering the lyrics data. 
+
+
+
+### SAS Code
+
+SAS was used to compress lines of lyrics to single word strings. A character string of lines of song lyrics were read and compressed to a string of single word lyrics. These then were put in files with their associated album.
+
+SAS read in an xlsx file with the data structured as below containing all her songs. 
+
+track_title|track_n|line|lyric|album|
+:-----|:------|:-----|:-----|:-----|
+Tim McGraw|	1|	1|	He said the way my blue eyes shined|Taylor Swift|
+Tim McGraw|	1|	2|	Put those Georgia stars to shame that night|	Taylor Swift| 
+.....|.....|.....|.....|.....|
+evermore (Ft. Bon Iver)|	15|	59|	This pain wouldn't be for evermore|	Evermore|
+​evermore (Ft. Bon Iver)|	15|	60|	Evermore|	Evermore|
+
+
+```{r echo=TRUE}
+
+
+#data Tswift.Albums_dat (keep = album_num track_n Lyric);
+#set Tswift.Albums;
+
+#	     if album = 'Taylor Swift' then album_num = '1';
+#...
+#	else if album = 'Evermore'     then album_num = '9';
+#run;
+
+
+#data Tswift.TS1(drop = lyric st_count i )
+#...
+#	 Tswift.TS9(drop = lyric st_count i )  ;
+#	set Tswift.albums_dat;
+#	length word $ 20;
+	
+#	st_count = countw(lyric);
+		
+#		do i = 1 to st_count;
+#			st_count = countw(lyric);	
+#			word = compress(scan(lyric,i), "'", 'k a d');
+#word = propcase(word);
+
+#				select(album_num);
+#					when('1') OUTPUT Tswift.TS1;
+#...		
+#					when('9') OUTPUT Tswift.TS9;
+#				end;
+#		end;
+#run;
+
+```
+
+ ```{r}
+ ds1 <- read_sas('../input/sas-ts-lyrics/ts1.sas7bdat')
+ ds2 <- read_sas('../input/sas-ts-lyrics/ts2.sas7bdat')
+ ds3 <- read_sas('../input/sas-ts-lyrics/ts3.sas7bdat')
+ ds4 <- read_sas('../input/sas-ts-lyrics/ts4.sas7bdat')
+ ds5 <- read_sas('../input/sas-ts-lyrics/ts5.sas7bdat')
+ ds6 <- read_sas('../input/sas-ts-lyrics/ts6.sas7bdat')
+ ds7 <- read_sas('../input/sas-ts-lyrics/ts7.sas7bdat')
+ ds8 <- read_sas('../input/sas-ts-lyrics/ts8.sas7bdat')
+ ds9 <- read_sas('../input/sas-ts-lyrics/ts9.sas7bdat')
+ ```
+
+Data files look like this. 
+
+track_n|album_num|word|
+:-----|:-----|:-----|
+1|	1|	He|
+1|	1|	Said|
+1|	1|	The|
+1|	1|	Way|
+1|	1|	My|
+1|	1|	Blue|
+...|...|...|
+15|	1|	Won't|
+15|	1|	See|
+
+
+Stop words and other non-unique or non-sentient associated words were removed. These stop words were attained from the tidytext package with its stop words data set. These stop words were matched and given a value of 1 if the word is associated with the sentiment or 0 if it is not. They were then accumulated and given a count number. Words not a part of the stop words were removed manually. 
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+
+# Counts the number of each word
+
+f1 <- ds1 %>% 
+  mutate(word = as.character(word))
+f2 <- ds2 %>% 
+  mutate(word = as.character(word))
+f3 <- ds3 %>% 
+  mutate(word = as.character(word))
+f4 <- ds4 %>% 
+  mutate(word = as.character(word))
+f5 <- ds5 %>% 
+  mutate(word = as.character(word))
+f6 <- ds6 %>% 
+  mutate(word = as.character(word))
+f7 <- ds7 %>% 
+  mutate(word = as.character(word))
+f8 <- ds8 %>% 
+  mutate(word = as.character(word))
+f9 <- ds9 %>% 
+  mutate(word = as.character(word))
+
+
+
+
+ftot <- bind_rows(f1,f2,f3,f4,f5,f6,f7,f8,f9)
+
+  ds1$word <- tolower(ds1$word)
+  ds2$word <- tolower(ds2$word)
+  ds3$word <- tolower(ds3$word)
+  ds4$word <- tolower(ds4$word)
+  ds5$word <- tolower(ds5$word)
+  ds6$word <- tolower(ds6$word)
+  ds7$word <- tolower(ds7$word)
+  ds8$word <- tolower(ds8$word)
+  ds9$word <- tolower(ds9$word)
+
+  # creating data frames to hold unique words 
+  
+ds1 <- ds1 %>%
+ anti_join(stop_words,  c("word" = "word"))
+ds2 <- ds2 %>%
+ anti_join(stop_words,  c("word" = "word"))
+ds3 <- ds3 %>%
+ anti_join(stop_words,  c("word" = "word"))
+ds4 <- ds4 %>%
+ anti_join(stop_words,  c("word" = "word"))
+ds5 <- ds5 %>%
+ anti_join(stop_words,  c("word" = "word"))
+ds6 <- ds6 %>%
+ anti_join(stop_words,  c("word" = "word"))
+ds7 <- ds7 %>%
+ anti_join(stop_words,  c("word" = "word"))
+ds8 <- ds8 %>%
+ anti_join(stop_words,  c("word" = "word"))
+ds9 <- ds9 %>%
+ anti_join(stop_words,  c("word" = "word"))  
+
+# Counts the number of each word
+freq1 <- ds1 %>% 
+  mutate(word = as.character(word)) %>%
+  count(word)
+freq2 <- ds2 %>% 
+  mutate(word = as.character(word)) %>%
+  count(word)
+freq3 <- ds3 %>% 
+  mutate(word = as.character(word)) %>%
+  count(word)
+freq4 <- ds4 %>% 
+  mutate(word = as.character(word)) %>%
+  count(word)
+freq5 <- ds5 %>% 
+  mutate(word = as.character(word)) %>%
+  count(word)
+freq6 <- ds6 %>% 
+  mutate(word = as.character(word)) %>%
+  count(word)
+freq7 <- ds7 %>% 
+  mutate(word = as.character(word)) %>%
+  count(word)
+freq8 <- ds8 %>% 
+  mutate(word = as.character(word)) %>%
+  count(word)
+freq9 <- ds9 %>% 
+  mutate(word = as.character(word)) %>%
+  count(word)
+
+# orders the words by count
+freq1 <- freq1[order(-freq1$n),]
+freq2 <- freq2[order(-freq2$n),]
+freq3 <- freq3[order(-freq3$n),]
+freq4 <- freq4[order(-freq4$n),]
+freq5 <- freq5[order(-freq5$n),]
+freq6 <- freq6[order(-freq6$n),]
+freq7 <- freq7[order(-freq7$n),]
+freq8 <- freq8[order(-freq8$n),]
+freq9 <- freq9[order(-freq9$n),]
+
+# creates a master list of all the words in her albums with count
+freqtot <- bind_rows(ds1,ds2,ds3,ds4,ds5,ds6,ds7,ds8,ds9)
+freqtot1 <- freqtot %>% 
+  mutate(word = as.character(word))%>%
+  count(word)
+
+# removes some words manually
+freqtot <- freqtot %>% 
+  anti_join(stop_words, by=c("word"="word")) %>% 
+  filter(word != "ooh") %>% 
+  filter(word != "yeah") %>% 
+  filter(word != "ah") %>% 
+  filter(word != "uh") %>% 
+  filter(word != "ha") %>%
+  filter(word != "whoa") %>%
+  filter(word != "eh") %>%
+  filter(word != "hoo") %>%
+  filter(word != "ey") %>%
+  filter(word != "mmm") %>% 
+  filter(word != "eeh") %>% 
+  filter(word != "huh") %>% 
+  filter(word != "na") %>%
+  filter(word != "di")%>%
+  filter(word != "la")%>%
+  filter(word != "aah")%>%
+  filter(word != "ra")%>%
+  filter(word != "haa")%>%
+  filter(word != "di")%>%
+  filter(word != "da")%>%
+  filter(word != "'cause")%>%
+  filter(word != "gonna")%>%
+  filter(word != "wanna")
+
+freqtot1 <- freqtot %>% 
+  mutate(word = as.character(word))%>%
+  count(word)
+```
+
+
+A table of word count for all unique words in the albums
+
+```{r message=FALSE, warning=FALSE}
+freqtot1 <- freqtot1[order(-freqtot1$n) , ]
+
+kbl(freqtot1)%>%
+ kable_styling("striped", full_width = F) %>% 
+  scroll_box(width = "100%", height = "400px")
+```
+
+
+## Statistics
+
+6 "positive" and 6 "sad" word counts are looked at throughout the albums.Sad sentiment related words are bad, mad, leave, hate, lost, fall. Positive words are love, baby, beautiful, hope, smile,kiss.  Noticeable spike in "Love" for 1989, could be due to two tracks, "You are in Love" and "This Love", making heavy use of the word. Aside from "Love", "Baby", and "Bad", all other words stay under 25 times per album. "Baby" has noticeable trend increase in the time of  1989->Reputation->Lover, Reputation being the odd album out by being a more negative and an atypical album that we've seen from Ms. Swift.
+
+```{r}
+fnames <- c("bad","mad","leave","hate", "lost", "fall")
+pnames <- c("love","baby","beautiful","hope", "smile","kiss")
+namesm <- c(fnames,pnames)
+
+
+m1 <- data.frame(freq1[match(namesm,freq1$word,nomatch = 0),],"Taylor Swift" )
+m2 <- data.frame(freq2[match(namesm,freq2$word,nomatch = 0),],"Fearless")
+m3 <- data.frame(freq3[match(namesm,freq3$word,nomatch = 0),],"Speak Now")
+m4 <- data.frame(freq4[match(namesm,freq4$word,nomatch = 0),],"Red")
+m5 <- data.frame(freq5[match(namesm,freq5$word,nomatch = 0),],"1989")
+m6 <- data.frame(freq6[match(namesm,freq6$word,nomatch = 0),],"Reputation")
+m7 <- data.frame(freq7[match(namesm,freq7$word,nomatch = 0),],"Lover")
+m8 <- data.frame(freq8[match(namesm,freq8$word,nomatch = 0),],"folklore")
+m9 <- data.frame(freq9[match(namesm,freq9$word,nomatch = 0),],"evermore")
+
+
+
+colnames(m1)[3] <- "Album"
+colnames(m2)[3] <- "Album"
+colnames(m3)[3] <- "Album"
+colnames(m4)[3] <- "Album"
+colnames(m5)[3] <- "Album"
+colnames(m6)[3] <- "Album"
+colnames(m7)[3] <- "Album"
+colnames(m8)[3] <- "Album"
+colnames(m9)[3] <- "Album"
+
+
+mtot <- bind_rows(m1,m2,m3,m4,m5,m6,m7,m8,m9)
+
+ggplotly(mtot %>%
+ ggplot(aes(x = fct_inorder(Album), y = n , color = word))+ geom_line(aes(group=1))+
+    geom_point()+xlab("Album") + ylab("Count")) %>%
+layout(autosize = F, width = 800, height = 400)
+```
+
+Total number of words plotted by track, color associated with the album. 
+```{r}
+xwc <- data.frame(ftot %>% group_by(album_num,track_n) %>% count())
+xwc$Album <- case_when(
+xwc$album_num ==1 ~ "Taylor Swift",
+xwc$album_num ==2 ~ "Fearless",
+xwc$album_num ==3 ~ "Speak Now",
+xwc$album_num ==4 ~ "Red",
+xwc$album_num ==5 ~ "1989",
+xwc$album_num ==6 ~ "Reputation",
+xwc$album_num ==7 ~ "Lover",
+xwc$album_num ==8 ~ "folklore",
+xwc$album_num ==9 ~ "evermore")
+
+ggplotly(xwc %>%
+ ggplot(aes(x = xwc$track_n,
+            y = xwc$n, 
+            color = Album))+
+   geom_line(aes(group=1))+
+    geom_point()+xlab("Track") + 
+   ylab("Count")) %>%
+layout(autosize = F, width = 800, height = 400)
+```
+
+Total number of unique words plotted by track, color associated with the album. 
+```{r}
+uwc <- data.frame(freqtot %>% group_by(album_num,track_n) %>% count())
+uwc$Album <- case_when(uwc$album_num ==1 ~"Taylor Swift",
+uwc$album_num ==2 ~"Fearless",
+uwc$album_num ==3 ~"Speak Now",
+uwc$album_num ==4 ~"Red",
+uwc$album_num ==5 ~ "1989",
+uwc$album_num ==6 ~ "Reputation",
+uwc$album_num ==7 ~ "Lover",
+uwc$album_num ==8 ~ "folklore",
+uwc$album_num ==9 ~"evermore")
+
+ggplotly(uwc %>%
+ ggplot(aes(x = uwc$track_n,
+            y = uwc$n, 
+            color = Album))+
+   geom_line(aes(group=1))+
+    geom_point()+xlab("Track") + 
+   ylab("Count")) %>%
+layout(autosize = F, width = 800, height = 400)
+```
+
+
+The make up of unique words per song is calculated as a percentage and represented against the total unique word count for the tracks. 
+
+```{r}
+uwc$UW_Per <- uwc$n / xwc$n
+
+
+fig <- plot_ly(uwc,
+               x= ~n, 
+               y= ~UW_Per,
+               color = uwc$Album,
+               text =  ~uwc$track_n,
+               hovertemplate = paste(
+      "%{yaxis.title.text}: %{y}<br>",
+      "%{xaxis.title.text}: %{x}<br>",
+      "Track #:%{text}<br>"
+      )
+  ) %>% layout(xaxis =  list(title = "Unique Word Count"), yaxis = list(title = "Unique Word % of song"))
+
+fig
+```
+
+Here is a table for the unique word counts for all tracks.
+```{r}
+kbl(freqtot %>% group_by(album_num,track_n) %>% count(), col.names = c("Album","Track Number","Unique Word Count"))%>%
+ kable_styling("striped", full_width = F) %>% 
+  scroll_box(width = "41%", height = "200px")
+```
+
+
+## Wordcloud
+
+Words associated with positive and sadness sentiments are used to make a word cloud. Thus giving an informative visual on the words most closely associated with these two sentiments. Positive sentiments being in red and sadness sentiments in violet. 
+
+Here the total count frequency of each word is represented by size and color. Love is the big winner sitting pretty in the middle, "Stay" and "Red" stand out to me because I want to hypothesize "Stay Stay Stay" and "Red" contribute heavily to their placement in the wordcloud. 
+```{r}
+# CREATES A WORD CLOUD WITH ALL OF HER WORDS BY FREQUENCY
+
+freqtot1 %>% with(wordcloud(word, n, 
+                           min.freq = 30, 
+                           random.order = FALSE,
+                           colors=brewer.pal(8, "Dark2")))
+```
+
+
+Staying with the positive vs sad sentiment related words, the count frequency are represented with red for positive words and violet for sad words. Dear and Clean are words categorized into positive high frequency words but with songs like "Dear John" and "Clean" that would be categorized as sad or non-positive songs, giving me a future idea to label word sentiments based on the song sentiment rather than the words general sentiment. 
+
+
+```{r}
+     
+sentiments <-read_excel("../input/sentiments/Sentiments.xlsx")
+sent1 <- freqtot %>%
+  inner_join(sentiments) %>%
+  count(word,sentiment, sort = TRUE) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0)
+
+rownames(sent1) <- sent1$word
+comp <- c("positive","sadness")
+sadpos <- data.frame(sent1[comp])
+rownames(sadpos) <- sent1$word
+
+comparison.cloud(sadpos, random.order=FALSE, colors = c("indianred3","blueviolet"),
+                 title.size=4, max.words=150)
+
+```
+
+
+## Chord Diagram
+
+
+Her 3 grammy award winning Album of the Years are shown in the chord diagram along with the sentiments related to each album. 
+
+```{r}
+sent1a <- ds1 %>%
+  inner_join(sentiments) %>%
+  count(word,sentiment, sort = TRUE) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0)
+sent1a <- sent1a[,-1]
+sent1a <- sent1a %>%
+   summarise(across(everything(), ~ sum(., is.na(.), 0)))
+
+
+
+sent2a <- ds2 %>%
+  inner_join(sentiments) %>%
+  count(word,sentiment, sort = TRUE) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0)
+sent2a <- sent2a[,-1]
+sent2a <- sent2a %>%
+   summarise(across(everything(), ~ sum(., is.na(.), 0)))
+
+
+sent3a <- ds3 %>%
+  inner_join(sentiments) %>%
+  count(word,sentiment, sort = TRUE) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0)
+sent3a <- sent3a[,-1]
+sent3a <- sent3a %>%
+   summarise(across(everything(), ~ sum(., is.na(.), 0)))
+
+sent4a <- ds4 %>%
+  inner_join(sentiments) %>%
+  count(word,sentiment, sort = TRUE) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0)
+sent4a <- sent4a[,-1]
+sent4a <- sent4a %>%
+   summarise(across(everything(), ~ sum(., is.na(.), 0)))
+
+
+sent5a <- ds5 %>%
+  inner_join(sentiments) %>%
+  count(word,sentiment, sort = TRUE) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0)
+sent5a <- sent5a[,-1]
+sent5a <- sent5a %>%
+   summarise(across(everything(), ~ sum(., is.na(.), 0)))
+
+
+
+sent6a <- ds6 %>%
+  inner_join(sentiments) %>%
+  count(word,sentiment, sort = TRUE) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0)
+sent6a <- sent6a[,-1]
+sent6a <- sent6a %>%
+   summarise(across(everything(), ~ sum(., is.na(.), 0)))
+
+
+
+sent7a <- ds7 %>%
+  inner_join(sentiments) %>%
+  count(word,sentiment, sort = TRUE) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0)
+sent7a <- sent7a[,-1]
+sent7a <- sent7a %>%
+   summarise(across(everything(), ~ sum(., is.na(.), 0)))
+
+
+
+sent8a <- ds8 %>%
+  inner_join(sentiments) %>%
+  count(word,sentiment, sort = TRUE) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0)
+sent8a <- sent8a[,-1]
+sent8a <- sent8a %>%
+   summarise(across(everything(), ~ sum(., is.na(.), 0)))
+
+
+
+sent9a <- ds9 %>%
+  inner_join(sentiments) %>%
+  count(word,sentiment, sort = TRUE) %>%
+  pivot_wider(names_from = sentiment,
+              values_from = n,
+              values_fill = 0)
+sent9a <- sent9a[,-1]
+sent9a <- sent9a %>%
+   summarise(across(everything(), ~ sum(., is.na(.), 0)))
+
+sent1a$Album <- "Taylor Swift"
+sent2a$Album <- "Fearless"
+sent3a$Album <- "Speak Now"
+sent4a$Album <- "Red"
+sent5a$Album <- "1989"
+sent6a$Album <- "Reputation"
+sent7a$Album <- "Lover"
+sent8a$Album <- "folklore"
+sent9a$Album <- "evermore"
+
+sentot1 <- bind_rows(sent1a,sent5a,sent8a)
+sentot1 <- sentot1  %>% remove_rownames %>% column_to_rownames(var="Album")
+
+chordDiagram(sentot1)
+ 
+
+```
