@@ -469,6 +469,39 @@ stat_function(fun = dnorm, args = list(mean = mean(xwc$xwpm), sd = sd(xwc$xwpm))
 
 ```
 
+```{r}
+hist(xwc$xwpm,
+     breaks = 25,
+     freq = FALSE,
+     col = "violet")
+
+s1 = sd(xwc$xwpm)
+
+curve(dnorm(x,mean = mean(xwc$xwpm), sd = s1),
+      col = "blue",
+      add = TRUE,
+      lwd = 2)
+
+qqnorm(xwc$xwpm)
+qqline(xwc$xwpm)
+```
+```{r}
+hist(uwc$uwpm,
+     breaks = 25,
+     freq = FALSE,
+     col = "violet")
+
+s2 = sd(uwc$uwpm)
+
+curve(dnorm(x,mean = mean(uwc$uwpm), sd = s2),
+      col = "blue",
+      add = TRUE,
+      lwd = 2)
+
+qqnorm(uwc$uwpm)
+qqline(uwc$uwpm)
+```
+
 ## Wordcloud
 
 Words associated with positive and sadness sentiments are used to make a word cloud. Thus giving an informative visual on the words most closely associated with these two sentiments. Positive sentiments being in red and sadness sentiments in violet. 
