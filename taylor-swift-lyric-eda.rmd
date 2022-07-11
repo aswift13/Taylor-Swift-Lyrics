@@ -456,25 +456,17 @@ ggplotly( ggplot(xwc)+
 bins = 25)+            geom_vline(aes(xintercept=mean(xwpm)))
           )
 ```
-
+The following 4 plots show that the Word count per minute and Unique word counts per minute are roughly Normally distributed. 
 ```{r}
 
-ggplot(xwc, aes(x = xwpm))+
-            geom_histogram(
-              aes(y = ..density..),
-                  binwidth = 4,
-                  fill ="white")+
-            geom_vline(aes(xintercept=mean(xwpm))) +
-stat_function(fun = dnorm, args = list(mean = mean(xwc$xwpm), sd = sd(xwc$xwpm)))
-
-```
-
-```{r}
+par(mfrow = c(1, 1))
 hist(xwc$xwpm,
      breaks = 25,
      freq = FALSE,
-     col = "violet")
-
+     col = "violet",
+     xlab = "Word Count per Minute",
+     main = paste("Histogram of of WC w/ Normal Distribution")
+)
 s1 = sd(xwc$xwpm)
 
 curve(dnorm(x,mean = mean(xwc$xwpm), sd = s1),
@@ -489,8 +481,9 @@ qqline(xwc$xwpm)
 hist(uwc$uwpm,
      breaks = 25,
      freq = FALSE,
-     col = "violet")
-
+     col = "violet",
+     xlab = "Unique Word Count per Minute",
+     main = paste("Histogram of UWC w/ NOrmal Distribution"))
 s2 = sd(uwc$uwpm)
 
 curve(dnorm(x,mean = mean(uwc$uwpm), sd = s2),
@@ -660,7 +653,7 @@ sent7a$Album <- "Lover"
 sent8a$Album <- "folklore"
 sent9a$Album <- "evermore"
 
-sentot1 <- bind_rows(sent1a,sent5a,sent8a)
+sentot1 <- bind_rows(sent2a,sent5a,sent8a)
 sentot1 <- sentot1  %>% remove_rownames %>% column_to_rownames(var="Album")
 
 chordDiagram(sentot1)
