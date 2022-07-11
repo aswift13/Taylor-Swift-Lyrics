@@ -1,3 +1,4 @@
+
 ---
 title: "Taylor Swift Lyric EDA"
 author: "Alan Morales"
@@ -60,12 +61,13 @@ library(tidyverse)   # data science package collection
 library(circlize)    # making circular graphs
 library(haven)
 library(readxl)
+library(lubridate)
 
 ```
 
 ## Data Cleaning
 
-The data cleaning process began with SAS and ended with R filtering the lyrics data. 
+The data cleaning process began with SAS filtering/compressing and ended with R filtering the lyrics data. 
 
 
 
@@ -80,8 +82,8 @@ track_title|track_n|line|lyric|album|
 Tim McGraw|	1|	1|	He said the way my blue eyes shined|Taylor Swift|
 Tim McGraw|	1|	2|	Put those Georgia stars to shame that night|	Taylor Swift| 
 .....|.....|.....|.....|.....|
-evermore (Ft. Bon Iver)|	15|	59|	This pain wouldn't be for evermore|	Evermore|
-​evermore (Ft. Bon Iver)|	15|	60|	Evermore|	Evermore|
+evermore (Ft. Bon Iver)|	15|	59|	This pain wouldnt be for evermore|	Evermore|
+evermore (Ft. Bon Iver)|	15|	60|	Evermore|	Evermore|
 
 
 ```{r echo=TRUE}
@@ -131,7 +133,7 @@ evermore (Ft. Bon Iver)|	15|	59|	This pain wouldn't be for evermore|	Evermore|
  ds9 <- read_sas('../input/sas-ts-lyrics/ts9.sas7bdat')
  ```
 
-Data files look like this. 
+SAS Data files look like this. 
 
 track_n|album_num|word|
 :-----|:-----|:-----|
@@ -142,11 +144,11 @@ track_n|album_num|word|
 1|	1|	My|
 1|	1|	Blue|
 ...|...|...|
-15|	1|	Won't|
+15|	1|	Wont|
 15|	1|	See|
 
 
-Stop words and other non-unique or non-sentient associated words were removed. These stop words were attained from the tidytext package with its stop words data set. These stop words were matched and given a value of 1 if the word is associated with the sentiment or 0 if it is not. They were then accumulated and given a count number. Words not a part of the stop words were removed manually. 
+Stop words and other non-unique or non-sentient associated words were removed. These stop words were attained from the tidytext package with its stop words data set. Using anti_join, the two data sets were merged and only non-stop words were taken. Lyrics that I consider stop words but the tidytext package did not include were removed manually. 
 
 ```{r echo=TRUE, message=FALSE, warning=FALSE}
 
@@ -294,13 +296,14 @@ freqtot1 <- freqtot1[order(-freqtot1$n) , ]
 
 kbl(freqtot1)%>%
  kable_styling("striped", full_width = F) %>% 
-  scroll_box(width = "100%", height = "400px")
+  scroll_box(width = "35%",height = "400px")
 ```
 
 
 ## Statistics
 
-6 "positive" and 6 "sad" word counts are looked at throughout the albums.Sad sentiment related words are bad, mad, leave, hate, lost, fall. Positive words are love, baby, beautiful, hope, smile,kiss.  Noticeable spike in "Love" for 1989, could be due to two tracks, "You are in Love" and "This Love", making heavy use of the word. Aside from "Love", "Baby", and "Bad", all other words stay under 25 times per album. "Baby" has noticeable trend increase in the time of  1989->Reputation->Lover, Reputation being the odd album out by being a more negative and an atypical album that we've seen from Ms. Swift.
+6 "positive" and 6 "sad" word counts are looked at throughout the albums.Sad sentiment related words are bad, mad, leave, hate, lost, fall. Positive words are love, baby, beautiful, hope, smile,kiss.  Noticeable spike in "Love" for 1989, could be due to two tracks, "You are in Love" and "This Love", making heavy use of the word. Aside from "Love", "Baby", and "Bad", all other words stay under 25 times per album. "Baby" has noticeable trend increase in the time of  1989->Reputation->Lover, Reputation being the odd album out by being a more negative and an atypical album that we have seen from Ms. Swift.
+
 
 ```{r}
 fnames <- c("bad","mad","leave","hate", "lost", "fall")
@@ -364,6 +367,7 @@ layout(autosize = F, width = 800, height = 400)
 ```
 
 Total number of unique words plotted by track, color associated with the album. 
+
 ```{r}
 uwc <- data.frame(freqtot %>% group_by(album_num,track_n) %>% count())
 uwc$Album <- case_when(uwc$album_num ==1 ~"Taylor Swift",
@@ -386,16 +390,15 @@ ggplotly(uwc %>%
 layout(autosize = F, width = 800, height = 400)
 ```
 
-
 The make up of unique words per song is calculated as a percentage and represented against the total unique word count for the tracks. 
 
 ```{r}
-uwc$UW_Per <- uwc$n / xwc$n
+uwc$Per <- uwc$n / xwc$n
 
 
 fig <- plot_ly(uwc,
                x= ~n, 
-               y= ~UW_Per,
+               y= ~Per,
                color = uwc$Album,
                text =  ~uwc$track_n,
                hovertemplate = paste(
@@ -416,6 +419,56 @@ kbl(freqtot %>% group_by(album_num,track_n) %>% count(), col.names = c("Album","
 ```
 
 
+
+```{r}
+uwc$time  <- as.numeric("3:54","2:55","3:35","3:22","4:01","3:29","4:11","3:58","4:04","3:35","3:24","3:35","3:26","3:42","4:01","4:54","3:55","4:14","3:54","3:51","4:23","3:20","4:21","4:03","3:45","4:05","4:39","3:57","5:12","3:57","4:23","3:58","4:01","3:40","4:37","4:04","3:09","3:28","4:02","3:50","4:20","4:53","4:00","6:43","3:57","4:25","4:50","5:53","3:37","5:02","4:02","6:07","5:17","3:58","3:54","4:36","4:55","3:43","4:02","3:39","10:13","3:50","4:04","3:13","3:25","4:59","3:22","4:44","4:00","4:05","3:40","3:58","4:45","3:43","3:40","4:24","4:57","4:18","3:44","3:45","4:45","4:23","4:00","3:20", "3:32","3:51","3:51","3:55","3:13","3:39","3:27","3:31","3:40","4:07","4:10","3:15","4:30","4:05","4:27","3:50","3:28","4:04","3:58","3:56","3:52","3:31","3:47","3:29","3:53","3:34","3:31","3:50","3:27","3:23","3:55","2:51","2:58","3:41","3:10","3:31","2:53","3:54","3:42","4:47","3:19","3:10","3:22","3:20","2:51","3:43","3:13","2:30","4:53","3:30","3:59","3:51","4:45","4:15",  "3:29","3:28","4:21","3:15","3:10","4:12","3:57","4:49","4:54","3:54","3:40","3:31","3:34","4:04","3:05","3:49","4:05","3:35","5:15","3:45","4:35","4:20","4:35","3:35","4:17","3:00","5:04","4:05","4:15")
+```
+
+```{r}
+uwc$seconds <- 
+(as.numeric(as.POSIXct(strptime(uwc$time, format = "%M:%OS"))) - 
+    as.numeric(as.POSIXct(strptime("0", format = "%S"))))
+uwc$minutes <- uwc$seconds / 60
+xwc$minutes <- uwc$minutes
+
+uwc$uwpm <- uwc$n / uwc$minutes
+
+xwc$xwpm <- xwc$n / xwc$minutes
+```
+
+
+```{r}
+
+ggplotly( ggplot(uwc)+
+            geom_histogram(
+              aes(x = uwpm,
+                  fill =Album,
+                  text = paste("Track:",uwc$track_n)),
+              #binwidth = w1
+              bins = 25)+            geom_vline(aes(xintercept=mean(uwpm))))
+
+ggplotly( ggplot(xwc)+
+            geom_histogram(
+              aes(x = xwpm,
+                  fill =Album,
+                  text = paste("Track:",xwc$track_n)),
+#              binwidth = 3)+
+bins = 25)+            geom_vline(aes(xintercept=mean(xwpm)))
+          )
+```
+
+```{r}
+
+ggplot(xwc, aes(x = xwpm))+
+            geom_histogram(
+              aes(y = ..density..),
+                  binwidth = 4,
+                  fill ="white")+
+            geom_vline(aes(xintercept=mean(xwpm))) +
+stat_function(fun = dnorm, args = list(mean = mean(xwc$xwpm), sd = sd(xwc$xwpm)))
+
+```
+
 ## Wordcloud
 
 Words associated with positive and sadness sentiments are used to make a word cloud. Thus giving an informative visual on the words most closely associated with these two sentiments. Positive sentiments being in red and sadness sentiments in violet. 
@@ -432,6 +485,7 @@ freqtot1 %>% with(wordcloud(word, n,
 
 
 Staying with the positive vs sad sentiment related words, the count frequency are represented with red for positive words and violet for sad words. Dear and Clean are words categorized into positive high frequency words but with songs like "Dear John" and "Clean" that would be categorized as sad or non-positive songs, giving me a future idea to label word sentiments based on the song sentiment rather than the words general sentiment. 
+
 
 
 ```{r}
