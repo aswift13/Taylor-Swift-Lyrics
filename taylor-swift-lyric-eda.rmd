@@ -436,7 +436,6 @@ uwc$uwpm <- uwc$n / uwc$minutes
 xwc$xwpm <- xwc$n / xwc$minutes
 ```
 
-
 ```{r}
 
 ggplotly( ggplot(uwc)+
@@ -445,7 +444,10 @@ ggplotly( ggplot(uwc)+
                   fill =Album,
                   text = paste("Track:",uwc$track_n)),
               #binwidth = w1
-              bins = 25)+            geom_vline(aes(xintercept=mean(uwpm))))
+              bins = 25)+            geom_vline(aes(xintercept=mean(uwpm)))+
+            ggtitle("Plot of Unique Word Count per Minute") +
+  xlab("UWC per Minute") + 
+    ylab("Frequency"))
 
 ggplotly( ggplot(xwc)+
             geom_histogram(
@@ -453,9 +455,30 @@ ggplotly( ggplot(xwc)+
                   fill =Album,
                   text = paste("Track:",xwc$track_n)),
 #              binwidth = 3)+
-bins = 25)+            geom_vline(aes(xintercept=mean(xwpm)))
-          )
+bins = 25)+            geom_vline(aes(xintercept=mean(xwpm)))+
+            ggtitle("Plot of Total Word Count per Minute") +
+  xlab("WC per Minute") + 
+    ylab("Frequency"))
+
 ```
+
+```{r eval=FALSE, include=FALSE}
+
+ggplot(xwc, aes(x = xwpm))+
+            geom_histogram(
+              aes(y = ..density..),
+                  binwidth = 4,
+                  fill ="white")+
+            geom_vline(aes(xintercept=mean(xwpm))) +
+stat_function(fun = dnorm, args = list(mean = mean(xwc$xwpm), sd = sd(xwc$xwpm)))+
+            ggtitle("HIstorgram of TWC and Normal Distribution") +
+  xlab("WC per Minute") + 
+    ylab("Desnsity")
+
+
+```
+
+
 The following 4 plots show that the Word count per minute and Unique word counts per minute are roughly Normally distributed. 
 ```{r}
 
